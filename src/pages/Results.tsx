@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  CheckCircle, Target, MessageSquare, Brain, Eye, Activity,
-  ArrowRight, RotateCcw, TrendingUp
+  CheckCircle, Target, MessageSquare, Brain, Activity,
+  ArrowRight, RotateCcw, TrendingUp, CalendarDays, BookOpen
 } from 'lucide-react';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -20,10 +21,17 @@ const mockResults = {
   ideal_answer: "When answering system design questions, start with requirements clarification, then move to high-level architecture, and finally dive into specific components.",
   weaknesses: ['Time management', 'Technical depth on databases', 'Filler words usage'],
   suggested_topics: ['B-Trees & Indexing', 'Distributed Systems', 'STAR Method Practice'],
+  followup_type: 'probe' as const,
+  study_plan: [
+    { day: 1, topic: 'Database Indexing', resource: 'LeetCode SQL problems', action: 'Solve 5 B-Tree questions' },
+    { day: 2, topic: 'System Design Basics', resource: 'System Design Primer (GitHub)', action: 'Design a URL shortener end-to-end' },
+    { day: 3, topic: 'Behavioral STAR', resource: 'MockForage AI Behavioral Mode', action: 'Practice 3 STAR responses with timer' },
+  ],
 };
 
 const Results = () => {
   const navigate = useNavigate();
+  const [showPlan, setShowPlan] = useState(false);
 
   const radarData = [
     { metric: 'Clarity', value: mockResults.clarity },
@@ -38,11 +46,7 @@ const Results = () => {
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8">
       {/* Score Header */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="glass-card p-8 text-center"
-      >
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-success/10 text-success text-sm font-medium mb-4">
           <CheckCircle className="w-4 h-4" /> Interview Complete
         </div>
@@ -124,22 +128,47 @@ const Results = () => {
         </motion.div>
       </div>
 
+      {/* AI Study Plan */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+        <button
+          onClick={() => setShowPlan(!showPlan)}
+          className="w-full glass-card-hover p-6 text-left"
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <CalendarDays className="w-5 h-5 text-accent" /> Your 3-Day Improvement Plan
+            </h3>
+            <span className="text-muted-foreground text-sm">{showPlan ? 'Hide' : 'Show'}</span>
+          </div>
+        </button>
+        {showPlan && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="space-y-3 mt-4">
+            {mockResults.study_plan.map((item) => (
+              <div key={item.day} className="glass-card p-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-sm">
+                    D{item.day}
+                  </div>
+                  <h4 className="font-semibold">{item.topic}</h4>
+                </div>
+                <div className="ml-11 space-y-1">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <BookOpen className="w-3.5 h-3.5" /> {item.resource}
+                  </p>
+                  <p className="text-sm text-primary">→ {item.action}</p>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </motion.div>
+
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/setup')}
-          className="flex-1 glow-button flex items-center justify-center gap-2"
-        >
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/setup')} className="flex-1 glow-button flex items-center justify-center gap-2">
           <RotateCcw className="w-4 h-4" /> Practice Again
         </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/')}
-          className="flex-1 py-3 rounded-lg bg-secondary text-secondary-foreground font-medium flex items-center justify-center gap-2 hover:bg-secondary/80 transition"
-        >
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/dashboard')} className="flex-1 py-3 rounded-lg bg-secondary text-secondary-foreground font-medium flex items-center justify-center gap-2 hover:bg-secondary/80 transition">
           Back to Dashboard <ArrowRight className="w-4 h-4" />
         </motion.button>
       </div>
