@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,6 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import FloatingAssistant from "@/components/FloatingAssistant";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Landing from "@/pages/Landing";
+import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import Dashboard from "@/pages/Dashboard";
 import InterviewSetup from "@/pages/InterviewSetup";
 import InterviewSession from "@/pages/InterviewSession";
@@ -12,8 +17,33 @@ import Results from "@/pages/Results";
 import Achievements from "@/pages/Achievements";
 import ResumeMode from "@/pages/ResumeMode";
 import NotFound from "./pages/NotFound";
+import { useAppStore } from "@/store/useAppStore";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  const { loadSession } = useAppStore();
+  useEffect(() => { loadSession(); }, [loadSession]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/setup" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
+        <Route path="/interview" element={<ProtectedRoute><InterviewSession /></ProtectedRoute>} />
+        <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+        <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+        <Route path="/resume" element={<ProtectedRoute><ResumeMode /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <FloatingAssistant />
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -21,19 +51,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/setup" element={<InterviewSetup />} />
-            <Route path="/interview" element={<InterviewSession />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="/achievements" element={<Achievements />} />
-            <Route path="/resume" element={<ResumeMode />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <FloatingAssistant />
-        </div>
+        <AppContent />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

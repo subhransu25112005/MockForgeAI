@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import {
   Briefcase, BarChart2, MessageSquare, Building2, Globe, User,
-  ArrowRight, Sparkles
+  ArrowRight, Sparkles, Timer
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const options = {
   role: ['Frontend Developer', 'Backend Developer', 'Full Stack', 'Data Scientist', 'DevOps', 'Product Manager', 'ML Engineer'],
@@ -40,12 +41,13 @@ const InterviewSetup = () => {
   const [config, setConfig] = useState({
     role: '', difficulty: '', type: '', company: '', language: '', personality: '',
   });
+  const [pressureMode, setPressureMode] = useState(false);
 
   const allSelected = Object.values(config).every(Boolean);
 
   const handleStart = () => {
     if (!allSelected) return;
-    setInterviewConfig(config);
+    setInterviewConfig({ ...config, pressureMode });
     startInterview();
     navigate('/interview');
   };
@@ -87,6 +89,25 @@ const InterviewSetup = () => {
             </div>
           </motion.div>
         ))}
+
+        {/* Pressure Mode Toggle */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Timer className="w-5 h-5 text-warning" />
+              <div>
+                <h3 className="font-semibold">Pressure Mode</h3>
+                <p className="text-sm text-muted-foreground">Countdown timer with auto-submit. Test under pressure!</p>
+              </div>
+            </div>
+            <Switch checked={pressureMode} onCheckedChange={setPressureMode} />
+          </div>
+        </motion.div>
       </div>
 
       <motion.button

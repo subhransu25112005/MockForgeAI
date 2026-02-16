@@ -1,10 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Play, Trophy, FileText, User, LogOut, Zap } from 'lucide-react';
+import { LayoutDashboard, Play, Trophy, FileText, LogOut, Zap } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/setup', label: 'Start Interview', icon: Play },
   { path: '/achievements', label: 'Achievements', icon: Trophy },
   { path: '/resume', label: 'Resume Mode', icon: FileText },
@@ -12,15 +12,25 @@ const navItems = [
 
 const Navbar = () => {
   const location = useLocation();
-  const { user, stats } = useAppStore();
+  const navigate = useNavigate();
+  const { user, stats, isAuthenticated, logout } = useAppStore();
+
+  // Don't show navbar on landing, login, signup
+  const hideOn = ['/', '/login', '/signup'];
+  if (hideOn.includes(location.pathname)) return null;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <nav className="glass-card border-b border-border px-6 py-3 flex items-center justify-between sticky top-0 z-40">
-      <Link to="/" className="flex items-center gap-3">
+      <Link to="/dashboard" className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
           <Zap className="w-5 h-5 text-primary" />
         </div>
-        <span className="text-lg font-bold gradient-text hidden sm:inline">InterviewMaster AI</span>
+        <span className="text-lg font-bold gradient-text hidden sm:inline">MockForage AI</span>
       </Link>
 
       <div className="flex items-center gap-1">
@@ -57,6 +67,11 @@ const Navbar = () => {
           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-semibold text-primary">
             {user?.name?.[0] || 'U'}
           </div>
+          {isAuthenticated && (
+            <button onClick={handleLogout} className="p-2 rounded-lg text-muted-foreground hover:text-destructive transition">
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </nav>
