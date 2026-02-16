@@ -33,7 +33,7 @@ const Login = () => {
           <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
             <Zap className="w-6 h-6 text-primary" />
           </div>
-          <span className="text-xl font-bold gradient-text">MockForage AI</span>
+          <span className="text-xl font-bold gradient-text">MockForge AI</span>
         </div>
         <h2 className="text-2xl font-bold text-center mb-2">Welcome Back</h2>
         <p className="text-center text-muted-foreground text-sm mb-6">Sign in to continue practicing</p>

@@ -25,7 +25,7 @@ const mockResults = {
   study_plan: [
     { day: 1, topic: 'Database Indexing', resource: 'LeetCode SQL problems', action: 'Solve 5 B-Tree questions' },
     { day: 2, topic: 'System Design Basics', resource: 'System Design Primer (GitHub)', action: 'Design a URL shortener end-to-end' },
-    { day: 3, topic: 'Behavioral STAR', resource: 'MockForage AI Behavioral Mode', action: 'Practice 3 STAR responses with timer' },
+    { day: 3, topic: 'Behavioral STAR', resource: 'MockForge AI Behavioral Mode', action: 'Practice 3 STAR responses with timer' },
   ],
 };
 

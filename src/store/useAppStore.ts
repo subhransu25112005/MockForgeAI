@@ -116,20 +116,20 @@ export const useAppStore = create<AppState>((set) => ({
 
   login: (name, email) => {
     const user = { name, email };
-    localStorage.setItem('mockforage_user', JSON.stringify(user));
+    localStorage.setItem('mockforge_user', JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
   signup: (name, email) => {
     const user = { name, email };
-    localStorage.setItem('mockforage_user', JSON.stringify(user));
+    localStorage.setItem('mockforge_user', JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
   logout: () => {
-    localStorage.removeItem('mockforage_user');
+    localStorage.removeItem('mockforge_user');
     set({ user: null, isAuthenticated: false });
   },
   loadSession: () => {
-    const stored = localStorage.getItem('mockforage_user');
+    const stored = localStorage.getItem('mockforge_user');
     if (stored) {
       try {
         const user = JSON.parse(stored);

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { Mic, MicOff, Send, Video, VideoOff, StopCircle, Gauge, Brain, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import ConfidenceCamera from "@/components/ConfidenceCamera";
 
 const simulatedQuestions = [
   "Tell me about yourself and your experience.",
@@ -28,6 +29,9 @@ const detectSTAR = (text: string) => {
 };
 
 const InterviewSession = () => {
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [recording, setRecording] = useState(false);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
   const { interviewConfig, addMessage, messages, endInterview, addXP, interviewHistory, addToHistory } = useAppStore();
   const [input, setInput] = useState('');
@@ -94,6 +98,41 @@ const InterviewSession = () => {
       } catch { /* camera denied */ }
     }
   };
+  const startRecording = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+  });
+
+  if (videoPreviewRef.current) {
+    videoPreviewRef.current.srcObject = stream;
+  }
+
+  const recorder = new MediaRecorder(stream);
+  const chunks: Blob[] = [];
+
+  recorder.ondataavailable = e => chunks.push(e.data);
+
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: "video/webm" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "interview-recording.webm";
+    a.click();
+  };
+
+  recorder.start();
+  setMediaRecorder(recorder);
+  setRecording(true);
+};
+
+const stopRecording = () => {
+  mediaRecorder?.stop();
+  setRecording(false);
+};
+
 
   const toggleMic = () => {
     if (isListening) {
@@ -186,6 +225,42 @@ const InterviewSession = () => {
         <div className="glass-card p-4 space-y-4">
           <div className="flex items-center gap-2 text-sm">
             <Clock className="w-4 h-4 text-primary" />
+            {/* LEFT PANEL */}
+<div className="left-panel">
+
+  {/* 🔴 PASTE VIDEO RECORDER HERE */}
+  <div className="bg-gray-900 p-4 rounded-xl border border-cyan-500/20">
+    <video
+      ref={videoPreviewRef}
+      autoPlay
+      muted
+      playsInline
+      className="w-full rounded-lg mb-3"
+    />
+
+    {!recording ? (
+      <button
+        onClick={startRecording}
+        className="bg-cyan-500 text-black px-4 py-2 rounded-lg"
+      >
+        Start Recording
+      </button>
+    ) : (
+      <button
+        onClick={stopRecording}
+        className="bg-red-500 text-white px-4 py-2 rounded-lg"
+      >
+        Stop Recording
+      </button>
+    )}
+  </div>
+
+  {/* Existing stats UI below */}
+  <div>Duration...</div>
+  <div>Confidence...</div>
+
+</div>
+
             <span className="text-muted-foreground">Duration</span>
             <span className="ml-auto font-mono font-semibold text-foreground">{formatTime(elapsed)}</span>
           </div>
@@ -261,11 +336,10 @@ const InterviewSession = () => {
               animate={{ opacity: 1, y: 0 }}
               className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
-                m.role === 'user'
+              <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${m.role === 'user'
                   ? 'bg-primary text-primary-foreground rounded-br-md'
                   : 'glass-card text-card-foreground rounded-bl-md'
-              }`}>
+                }`}>
                 {m.content}
               </div>
             </motion.div>
@@ -301,6 +375,8 @@ const InterviewSession = () => {
           </button>
         </div>
       </div>
+      <ConfidenceCamera />
+
     </div>
   );
 };

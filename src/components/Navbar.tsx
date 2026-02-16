@@ -30,7 +30,7 @@ const Navbar = () => {
         <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
           <Zap className="w-5 h-5 text-primary" />
         </div>
-        <span className="text-lg font-bold gradient-text hidden sm:inline">MockForage AI</span>
+        <span className="text-lg font-bold gradient-text hidden sm:inline">MockForge AI</span>
       </Link>
 
       <div className="flex items-center gap-1">

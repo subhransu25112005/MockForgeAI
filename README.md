@@ -1,73 +1,195 @@
-# Welcome to your Lovable project
+# 🚀 MockForage AI — Smart AI Interview Practice Platform
 
-## Project info
+**MockForage AI** is a modern AI-powered interview preparation platform that simulates real interview experiences with live coaching, analytics, and performance tracking.
+It helps students and job seekers practice **technical, HR, and behavioral interviews** with real-time feedback and confidence analysis.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## ✨ Key Features
 
-There are several ways of editing your application.
+### 🧑‍💻 Core Interview System
 
-**Use Lovable**
+* 🔐 User Authentication (Login / Signup)
+* 🏠 Landing Page + Protected Dashboard
+* 🎯 Role-based interview selection (Frontend, Backend, Full Stack, Data Science, etc.)
+* 🧠 AI-style interviewer conversation flow
+* ⏱️ Timed interview sessions
+* 💬 Chat-style answer interface
+* 🧾 Resume-to-Interview Mode (paste resume → generate questions)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🎥 Media Recording & Analysis
 
-**Use your preferred IDE**
+* 📹 **Live Video Recording** during interview
+* 🎙️ Microphone input support
+* ⌨️ Text-based answering option
+* 🟢 Camera preview before recording
+* 💾 Recorded media stored locally (can be extended to cloud)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 📊 Confidence & Performance Tracking
 
-Follow these steps:
+* 📈 **Live Confidence Meter**
+* ⏱️ Duration tracking
+* 🧠 STAR answer structure detection
+* 📉 Weekly progress charts
+* 🏆 Interview readiness score
+* 📊 Performance breakdown (confidence, clarity, completion)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 🎮 Engagement & Gamification
 
-# Step 3: Install the necessary dependencies.
-npm i
+* ⭐ XP points system
+* 🔥 Daily practice streaks
+* 🏅 Achievement badges
+* 🏆 Leaderboard support
+* 📅 Interview history tracking
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+---
+
+### 🤖 Smart Coaching Features
+
+* 🗣️ Real-time speech hints (pace, clarity prompts)
+* 🎯 Adaptive difficulty concept ready
+* 🧠 Behavioral + Technical question sets
+* 💡 Smart feedback generation ready for AI API integration
+
+---
+
+### 🧩 Extra Advanced Features
+
+* 🎥 Confidence detection via camera (visual engagement)
+* ⏳ Pressure Mode (auto-submit timer)
+* 🤖 Floating AI Assistant help widget
+* 🌙 Modern neon dark UI
+* ⚡ Fast single-page app experience
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+* **React + TypeScript**
+* **Vite**
+* **Tailwind CSS**
+* **Framer Motion** (animations)
+* **Lucide Icons**
+
+### State & Routing
+
+* React Router
+* Zustand / Context Store (app state)
+
+### Browser APIs Used
+
+* MediaDevices API (camera + mic)
+* MediaRecorder API (video/audio recording)
+* Speech recognition hooks (optional)
+
+### Charts & UI
+
+* Recharts / Custom graphs
+* Responsive component layout
+
+### Deployment
+
+* GitHub (source control)
+* Vercel / Netlify compatible
+
+---
+
+## 📂 Project Structure
+
+```
+src/
+ ├── components/
+ │    ├── ConfidenceCamera.tsx
+ │    ├── FloatingAssistant.tsx
+ │    ├── Navbar.tsx
+ │    └── UI components
+ │
+ ├── pages/
+ │    ├── Landing.tsx
+ │    ├── Login.tsx
+ │    ├── Dashboard.tsx
+ │    ├── InterviewSetup.tsx
+ │    ├── InterviewSession.tsx
+ │    ├── Results.tsx
+ │    └── ResumeMode.tsx
+ │
+ ├── store/
+ └── main.tsx
+```
+
+---
+
+## ▶️ Run Locally
+
+### 1️⃣ Clone repo
+
+```
+git clone <your-repo-url>
+cd mockforage-ai
+```
+
+### 2️⃣ Install dependencies
+
+```
+npm install
+```
+
+### 3️⃣ Start development server
+
+```
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+App runs at:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+ Local:   http://localhost:8081/
+Network: http://10.173.227.155:8081/
+```
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🔒 Permissions Required
 
-## What technologies are used for this project?
+Browser will request:
 
-This project is built with:
+* Camera access (video recording & confidence detection)
+* Microphone access (audio recording)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Allow both for full functionality.
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 🚀 Future Enhancements (Optional)
 
-## Can I connect a custom domain to my Lovable project?
+* AI LLM integration for real question generation
+* Cloud video storage (Firebase / Supabase)
+* Facial emotion detection model
+* Voice tone confidence scoring
+* Company-specific interview datasets
+* Mobile app version
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 👨‍💻 Author
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Submitted By: Team SrijanByte
+Built for HackFest / Academic Project
+
+---
+
+## 📜 License
+
+Educational / Demo project — free to modify.
+
+---
+
+### ⭐ If you like this project, give it a star on GitHub!

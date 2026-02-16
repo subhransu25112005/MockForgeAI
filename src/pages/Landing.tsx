@@ -35,7 +35,7 @@ const Landing = () => {
             <Zap className="w-4 h-4" /> AI-Powered Interview Prep
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-4">
-            <span className="gradient-text">MockForage</span>{' '}
+            <span className="gradient-text">MockForge</span>{' '}
             <span className="text-foreground">AI</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8">
@@ -82,7 +82,7 @@ const Landing = () => {
 
       {/* Footer */}
       <footer className="text-center py-8 text-sm text-muted-foreground border-t border-border">
-        © 2026 MockForage AI. Built for interview excellence.
+        © 2026 MockForge AI. Built for interview excellence.
       </footer>
     </div>
   );
