@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+/* ================= TYPES ================= */
+
 export interface InterviewConfig {
   role: string;
   difficulty: string;
@@ -15,6 +17,13 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+}
+
+export interface StudyPlanItem {
+  day: number;
+  topic: string;
+  resource: string;
+  action: string;
 }
 
 export interface FeedbackData {
@@ -34,13 +43,6 @@ export interface FeedbackData {
   study_plan: StudyPlanItem[];
 }
 
-export interface StudyPlanItem {
-  day: number;
-  topic: string;
-  resource: string;
-  action: string;
-}
-
 export interface UserStats {
   interviewsCompleted: number;
   readinessScore: number;
@@ -54,33 +56,44 @@ export interface UserStats {
   confidenceTrend: number[];
 }
 
-const defaultStats: UserStats = {
-  interviewsCompleted:
-    Number(localStorage.getItem("interviews_done")) || 12,
+/* ================= STORAGE HELPERS ================= */
 
-  readinessScore:
-    Number(localStorage.getItem("last_confidence")) || 73,
-
-  xpPoints:
-    Number(localStorage.getItem("xp")) || 2450,
-
-  streak: 5,
-  level: 7,
-  badges: ['First Interview','5 Day Streak','Quick Learner','Code Warrior'],
-  weeklyScores: [55,62,58,71,68,75,73],
+const loadStats = (): UserStats => ({
+  interviewsCompleted: Number(localStorage.getItem("interviews_done")) || 0,
+  readinessScore: Number(localStorage.getItem("last_confidence")) || 0,
+  xpPoints: Number(localStorage.getItem("xp")) || 0,
+  streak: Number(localStorage.getItem("streak")) || 1,
+  level: Number(localStorage.getItem("level")) || 1,
+  badges: JSON.parse(localStorage.getItem("badges") || '["First Interview"]'),
+  weeklyScores: JSON.parse(localStorage.getItem("weeklyScores") || "[60,65,70]"),
   strengths: ['Data Structures','System Design','Communication'],
   weaknesses: ['Dynamic Programming','Time Management','Concurrency'],
-  confidenceTrend: [40,48,52,55,63,67,72],
+  confidenceTrend: JSON.parse(localStorage.getItem("confidenceTrend") || "[50,55,60]"),
+});
+
+const saveStats = (stats: UserStats) => {
+  localStorage.setItem("interviews_done", String(stats.interviewsCompleted));
+  localStorage.setItem("last_confidence", String(stats.readinessScore));
+  localStorage.setItem("xp", String(stats.xpPoints));
+  localStorage.setItem("streak", String(stats.streak));
+  localStorage.setItem("level", String(stats.level));
+  localStorage.setItem("badges", JSON.stringify(stats.badges));
+  localStorage.setItem("weeklyScores", JSON.stringify(stats.weeklyScores));
+  localStorage.setItem("confidenceTrend", JSON.stringify(stats.confidenceTrend));
 };
 
+/* ================= AUTH ================= */
 
 interface AuthUser {
   name: string;
   email: string;
 }
 
+/* ================= STORE ================= */
+
 interface AppState {
-  // Auth
+
+  /* Auth */
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (name: string, email: string) => void;
@@ -88,13 +101,15 @@ interface AppState {
   logout: () => void;
   loadSession: () => void;
 
-  // Stats
+  /* Stats */
   stats: UserStats;
+  updateStatsAfterInterview: (confidence: number) => void;
+  addXP: (points: number) => void;
 
-  // Interview
+  /* Interview */
   interviewConfig: InterviewConfig | null;
   messages: Message[];
-  interviewHistory: string[]; // AI memory of key points
+  interviewHistory: string[];
   currentFeedback: FeedbackData | null;
   isInterviewActive: boolean;
   studyPlan: StudyPlanItem[];
@@ -107,13 +122,17 @@ interface AppState {
   startInterview: () => void;
   endInterview: () => void;
   clearMessages: () => void;
-  addXP: (points: number) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+/* ================= IMPLEMENTATION ================= */
+
+export const useAppStore = create<AppState>((set, get) => ({
+
   user: null,
   isAuthenticated: false,
-  stats: defaultStats,
+
+  stats: loadStats(),
+
   interviewConfig: null,
   messages: [],
   interviewHistory: [],
@@ -121,39 +140,81 @@ export const useAppStore = create<AppState>((set) => ({
   isInterviewActive: false,
   studyPlan: [],
 
+  /* ===== AUTH ===== */
+
   login: (name, email) => {
     const user = { name, email };
     localStorage.setItem('mockforge_user', JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
+
   signup: (name, email) => {
     const user = { name, email };
     localStorage.setItem('mockforge_user', JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
+
   logout: () => {
     localStorage.removeItem('mockforge_user');
     set({ user: null, isAuthenticated: false });
   },
+
   loadSession: () => {
     const stored = localStorage.getItem('mockforge_user');
     if (stored) {
       try {
-        const user = JSON.parse(stored);
-        set({ user, isAuthenticated: true });
-      } catch { /* ignore */ }
+        set({ user: JSON.parse(stored), isAuthenticated: true });
+      } catch {}
     }
   },
 
+  /* ===== STATS UPDATE AFTER INTERVIEW ===== */
+
+  updateStatsAfterInterview: (confidence) => {
+
+    const s = get().stats;
+
+    const newStats: UserStats = {
+      ...s,
+      interviewsCompleted: s.interviewsCompleted + 1,
+      readinessScore: confidence,
+      xpPoints: s.xpPoints + 50,
+      confidenceTrend: [...s.confidenceTrend.slice(-6), confidence],
+      weeklyScores: [...s.weeklyScores.slice(-6), confidence],
+      streak: s.streak + 1,
+      level: Math.floor((s.xpPoints + 50) / 200) + 1,
+    };
+
+    saveStats(newStats);
+
+    set({ stats: newStats });
+  },
+
+  addXP: (points) => {
+    const s = get().stats;
+    const newStats = { ...s, xpPoints: s.xpPoints + points };
+    saveStats(newStats);
+    set({ stats: newStats });
+  },
+
+  /* ===== INTERVIEW ===== */
+
   setInterviewConfig: (config) => set({ interviewConfig: config }),
+
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-  addToHistory: (point) => set((s) => ({ interviewHistory: [...s.interviewHistory, point] })),
+
+  addToHistory: (point) =>
+    set((s) => ({ interviewHistory: [...s.interviewHistory, point] })),
+
   setFeedback: (fb) => set({ currentFeedback: fb }),
+
   setStudyPlan: (plan) => set({ studyPlan: plan }),
-  startInterview: () => set({ isInterviewActive: true, messages: [], interviewHistory: [] }),
+
+  startInterview: () =>
+    set({ isInterviewActive: true, messages: [], interviewHistory: [] }),
+
   endInterview: () => set({ isInterviewActive: false }),
+
   clearMessages: () => set({ messages: [], interviewHistory: [] }),
-  addXP: (points) => set((s) => ({
-    stats: { ...s.stats, xpPoints: s.stats.xpPoints + points },
-  })),
+
 }));

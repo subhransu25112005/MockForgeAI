@@ -2,8 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
-import { Mic, MicOff, Send, Video, VideoOff, StopCircle, Gauge, Brain, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import {
+  Mic, MicOff, Send, Video, VideoOff,
+  StopCircle, Gauge, Brain, Clock,
+  AlertTriangle, CheckCircle, XCircle
+} from 'lucide-react';
 import ConfidenceCamera from "@/components/ConfidenceCamera";
+
+/* ---------------- DATA ---------------- */
 
 const simulatedQuestions = [
   "Tell me about yourself and your experience.",
@@ -14,54 +20,65 @@ const simulatedQuestions = [
   "How do you handle tight deadlines?",
 ];
 
-const speechHints = ['Good pace!', 'Slow down a bit', 'Great clarity!', 'Speak more confidently', 'Nice structure!'];
+const PRESSURE_TIME = 120;
 
-const PRESSURE_TIME = 120; // 2 minutes per answer
+/* ---------------- STAR CHECK ---------------- */
 
-// STAR detection
 const detectSTAR = (text: string) => {
   const lower = text.toLowerCase();
-  const situation = /situation|context|background|when i was|there was a time/i.test(lower);
-  const task = /task|goal|objective|i needed to|i had to|responsible for/i.test(lower);
-  const action = /action|i did|i decided|i implemented|i took|i built|i created/i.test(lower);
-  const result = /result|outcome|impact|improved|increased|decreased|led to|achieved/i.test(lower);
+  const situation = /situation|context|background|when i was/i.test(lower);
+  const task = /task|goal|objective|i needed/i.test(lower);
+  const action = /action|i did|implemented|built|created/i.test(lower);
+  const result = /result|outcome|impact|achieved|improved/i.test(lower);
   return { situation, task, action, result, complete: situation && task && action && result };
 };
 
+/* ================================================= */
+
 const InterviewSession = () => {
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [recording, setRecording] = useState(false);
-  const videoPreviewRef = useRef<HTMLVideoElement>(null);
+
   const navigate = useNavigate();
-  const { interviewConfig, addMessage, messages, endInterview, addXP, interviewHistory, addToHistory } = useAppStore();
+
+  const {
+    interviewConfig,
+    addMessage,
+    messages,
+    endInterview,
+    updateStatsAfterInterview,   // ✅ IMPORTANT
+    addXP,
+    interviewHistory,
+    addToHistory
+  } = useAppStore();
+
   const [input, setInput] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [videoOn, setVideoOn] = useState(false);
   const [typing, setTyping] = useState(false);
   const [questionIdx, setQuestionIdx] = useState(0);
-  const [speechHint, setSpeechHint] = useState('');
   const [confidence, setConfidence] = useState(65);
   const [elapsed, setElapsed] = useState(0);
   const [pressureTimer, setPressureTimer] = useState(PRESSURE_TIME);
+
+  const [videoOn, setVideoOn] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+
   const recognitionRef = useRef<any>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isPressure = interviewConfig?.pressureMode ?? false;
 
-  // General timer
+  /* ---------------- TIMER ---------------- */
+
   useEffect(() => {
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    const t = setInterval(() => setElapsed(e => e + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Pressure mode countdown
+  /* ---------------- PRESSURE MODE ---------------- */
+
   useEffect(() => {
     if (!isPressure) return;
     const t = setInterval(() => {
-      setPressureTimer((prev) => {
+      setPressureTimer(prev => {
         if (prev <= 1) {
-          // Auto-submit
           if (input.trim()) sendMessage();
           return PRESSURE_TIME;
         }
@@ -71,326 +88,255 @@ const InterviewSession = () => {
     return () => clearInterval(t);
   }, [isPressure, input]);
 
-  // Initial question
+  /* ---------------- INITIAL QUESTION ---------------- */
+
   useEffect(() => {
     if (messages.length === 0) {
-      const greeting = interviewConfig
-        ? `Hello! I'm your ${interviewConfig.personality} interviewer today for the ${interviewConfig.role} position at ${interviewConfig.company}. Let's get started.\n\n${simulatedQuestions[0]}`
-        : `Hello! Let's begin your interview practice.\n\n${simulatedQuestions[0]}`;
-      addMessage({ id: Date.now().toString(), role: 'assistant', content: greeting, timestamp: Date.now() });
+      const greeting =
+        interviewConfig
+          ? `Hello! I'm your ${interviewConfig.personality} interviewer for ${interviewConfig.role} at ${interviewConfig.company}.\n\n${simulatedQuestions[0]}`
+          : `Hello! Let's begin.\n\n${simulatedQuestions[0]}`;
+
+      addMessage({
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: greeting,
+        timestamp: Date.now()
+      });
     }
   }, []);
+
+  /* ---------------- SCROLL ---------------- */
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
+  /* ---------------- CAMERA ---------------- */
+
   const toggleVideo = async () => {
     if (videoOn) {
       const stream = videoRef.current?.srcObject as MediaStream;
-      stream?.getTracks().forEach((t) => t.stop());
+      stream?.getTracks().forEach(t => t.stop());
       setVideoOn(false);
     } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) videoRef.current.srcObject = stream;
-        setVideoOn(true);
-      } catch { /* camera denied */ }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      setVideoOn(true);
     }
   };
-  const startRecording = async () => {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: true
-  });
 
-  if (videoPreviewRef.current) {
-    videoPreviewRef.current.srcObject = stream;
-  }
-
-  const recorder = new MediaRecorder(stream);
-  const chunks: Blob[] = [];
-
-  recorder.ondataavailable = e => chunks.push(e.data);
-
-  recorder.onstop = () => {
-    const blob = new Blob(chunks, { type: "video/webm" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "interview-recording.webm";
-    a.click();
-  };
-
-  recorder.start();
-  setMediaRecorder(recorder);
-  setRecording(true);
-};
-
-const stopRecording = () => {
-  mediaRecorder?.stop();
-  setRecording(false);
-};
-
+  /* ---------------- MIC ---------------- */
 
   const toggleMic = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
       return;
     }
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
     if (!SpeechRecognition) return;
+
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true;
     recognition.onresult = (e: any) => {
-      const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+      const transcript = Array.from(e.results)
+        .map((r: any) => r[0].transcript)
+        .join('');
       setInput(transcript);
-      setSpeechHint(speechHints[Math.floor(Math.random() * speechHints.length)]);
     };
+
     recognition.start();
     recognitionRef.current = recognition;
-    setIsListening(true);
   };
 
-  const sendMessage = useCallback(() => {
-    if (!input.trim()) return;
-    const userText = input.trim();
-    addMessage({ id: Date.now().toString(), role: 'user', content: userText, timestamp: Date.now() });
-    setInput('');
-    setSpeechHint('');
-    setPressureTimer(PRESSURE_TIME);
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
+  /* ---------------- SEND MESSAGE ---------------- */
 
-    // AI Memory: extract key points
-    const keyPoint = userText.length > 50 ? userText.substring(0, 80) + '...' : userText;
+  const sendMessage = useCallback(() => {
+
+    if (!input.trim()) return;
+
+    const userText = input.trim();
+
+    addMessage({
+      id: Date.now().toString(),
+      role: 'user',
+      content: userText,
+      timestamp: Date.now()
+    });
+
+    setInput('');
+    setPressureTimer(PRESSURE_TIME);
+
+    const keyPoint =
+      userText.length > 50
+        ? userText.substring(0, 80) + '...'
+        : userText;
+
     addToHistory(keyPoint);
 
-    // Determine follow-up type
-    const followupTypes = ['challenge', 'probe', 'next'] as const;
-    const followupType = followupTypes[Math.floor(Math.random() * 3)];
-
-    // Simulate AI response with memory
     setTyping(true);
-    setConfidence(Math.min(100, confidence + Math.floor(Math.random() * 8)));
+
+    const newConfidence =
+      Math.min(100, confidence + Math.floor(Math.random() * 8));
+
+    setConfidence(newConfidence);
+
     setTimeout(() => {
-      const nextIdx = Math.min(questionIdx + 1, simulatedQuestions.length - 1);
+
+      const nextIdx =
+        Math.min(questionIdx + 1, simulatedQuestions.length - 1);
+
       setQuestionIdx(nextIdx);
 
-      // Build memory-aware response
-      let memoryRef = '';
-      if (interviewHistory.length > 1) {
-        memoryRef = `\n\n💭 Earlier you mentioned: "${interviewHistory[Math.floor(Math.random() * interviewHistory.length)]}" — let's build on that.\n\n`;
-      }
+      addMessage({
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content:
+          `Good answer!\nScore: ${70 + Math.floor(Math.random()*20)}/100\n\n${simulatedQuestions[nextIdx]}`,
+        timestamp: Date.now()
+      });
 
-      const followupLabels = { challenge: '🔥 Challenge', probe: '🔍 Deep Dive', next: '➡️ Moving On' };
-      const feedback = `Good answer! I noticed strong communication skills.\n\nScore: ${70 + Math.floor(Math.random() * 20)}/100\nFollow-up Type: ${followupLabels[followupType]}${memoryRef}\n${simulatedQuestions[nextIdx]}`;
-
-      addMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: feedback, timestamp: Date.now() });
       addXP(25);
       setTyping(false);
-    }, 1500 + Math.random() * 1000);
-  }, [input, isListening, confidence, questionIdx, interviewHistory]);
+
+    }, 1200);
+
+  }, [input, confidence, questionIdx, interviewHistory]);
+
+  /* ---------------- END INTERVIEW (FIXED) ---------------- */
 
   const handleEnd = () => {
 
-  // keep existing logic
-  endInterview();
+    endInterview();
 
-  // SAVE REAL DATA (for dashboard realism)
+    // ✅ ONE LINE does EVERYTHING
+    updateStatsAfterInterview(confidence);
 
-  const prev = Number(localStorage.getItem("interviews_done") || 0);
-  localStorage.setItem("interviews_done", String(prev + 1));
+    navigate('/results');
+  };
 
-  const xp = Number(localStorage.getItem("xp") || 0);
-  localStorage.setItem("xp", String(xp + 50));
-
-  localStorage.setItem("last_confidence", String(confidence));
-
-  // go to results page
-  navigate('/results');
-};
-
-
-  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatTime = (s:number)=>
+    `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
   const star = detectSTAR(input);
 
+  /* ====================== UI ====================== */
+
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)]">
-      {/* Sidebar */}
-      <div className="lg:w-80 p-4 space-y-4 border-b lg:border-b-0 lg:border-r border-border flex-shrink-0 overflow-y-auto">
-        {/* Video */}
-        <div className="glass-card overflow-hidden rounded-xl aspect-video relative">
-          {videoOn ? (
-            <video ref={videoRef} autoPlay muted className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-secondary/50 text-muted-foreground text-sm">Camera Off</div>
-          )}
-          <div className="absolute bottom-2 right-2 flex gap-1">
-            <button onClick={toggleVideo} className="p-1.5 rounded-lg bg-card/80 backdrop-blur text-foreground">
-              {videoOn ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-            </button>
+
+      {/* LEFT PANEL */}
+      <div className="lg:w-80 p-4 space-y-4 border-r border-border">
+
+        {/* VIDEO */}
+        <div className="glass-card rounded-xl overflow-hidden aspect-video">
+          {videoOn
+            ? <video ref={videoRef} autoPlay muted className="w-full h-full object-cover"/>
+            : <div className="w-full h-full flex items-center justify-center text-muted-foreground">Camera Off</div>
+          }
+          <button onClick={toggleVideo} className="m-2 p-2 bg-card rounded">
+            {videoOn ? <VideoOff/> : <Video/>}
+          </button>
+        </div>
+
+        {/* METRICS */}
+        <div className="glass-card p-4 space-y-2 text-sm">
+          <div className="flex items-center">
+            <Clock className="w-4 h-4 mr-2"/> Duration
+            <span className="ml-auto font-mono">{formatTime(elapsed)}</span>
+          </div>
+
+          <div className="flex items-center">
+            <Gauge className="w-4 h-4 mr-2"/> Confidence
+            <span className="ml-auto text-primary font-semibold">{confidence}%</span>
+          </div>
+
+          <div className="w-full bg-secondary h-2 rounded">
+            <motion.div
+              className="bg-primary h-full rounded"
+              animate={{width:`${confidence}%`}}
+            />
+          </div>
+
+          <div className="flex items-center">
+            <Brain className="w-4 h-4 mr-2"/> Question #{questionIdx+1}
           </div>
         </div>
 
-        {/* Metrics */}
-        <div className="glass-card p-4 space-y-4">
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="w-4 h-4 text-primary" />
-            {/* LEFT PANEL */}
-<div className="left-panel">
-
-  {/* 🔴 PASTE VIDEO RECORDER HERE */}
-  <div className="bg-gray-900 p-4 rounded-xl border border-cyan-500/20">
-    <video
-      ref={videoPreviewRef}
-      autoPlay
-      muted
-      playsInline
-      className="w-full rounded-lg mb-3"
-    />
-
-    {!recording ? (
-      <button
-        onClick={startRecording}
-        className="bg-cyan-500 text-black px-4 py-2 rounded-lg"
-      >
-        Start Recording
-      </button>
-    ) : (
-      <button
-        onClick={stopRecording}
-        className="bg-red-500 text-white px-4 py-2 rounded-lg"
-      >
-        Stop Recording
-      </button>
-    )}
-  </div>
-
-  {/* Existing stats UI below */}
-  <div>Duration...</div>
-  <div>Confidence...</div>
-
-</div>
-
-            <span className="text-muted-foreground">Duration</span>
-            <span className="ml-auto font-mono font-semibold text-foreground">{formatTime(elapsed)}</span>
+        {/* PRESSURE TIMER */}
+        {isPressure &&
+          <div className="glass-card p-4 text-center">
+            <AlertTriangle className="mx-auto mb-2"/>
+            <div className="text-2xl font-mono">{formatTime(pressureTimer)}</div>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Gauge className="w-4 h-4 text-primary" />
-            <span className="text-muted-foreground">Confidence</span>
-            <span className="ml-auto font-semibold text-primary">{confidence}%</span>
+        }
+
+        {/* STAR */}
+        {input.length>20 &&
+          <div className="glass-card p-3 text-sm">
+            {(['situation','task','action','result'] as const).map(s=>(
+              <div key={s} className="flex gap-2">
+                {star[s]?<CheckCircle size={14}/>:<XCircle size={14}/>}
+                {s}
+              </div>
+            ))}
           </div>
-          <div className="w-full bg-secondary rounded-full h-2">
-            <motion.div className="h-full rounded-full bg-primary" animate={{ width: `${confidence}%` }} transition={{ duration: 0.5 }} />
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Brain className="w-4 h-4 text-accent" />
-            <span className="text-muted-foreground">Q #{questionIdx + 1}</span>
-          </div>
-        </div>
+        }
 
-        {/* Pressure Mode Timer */}
-        {isPressure && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className={`glass-card p-4 text-center ${pressureTimer <= 30 ? 'border-destructive/50' : ''}`}
-          >
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <AlertTriangle className={`w-4 h-4 ${pressureTimer <= 30 ? 'text-destructive animate-pulse' : 'text-warning'}`} />
-              <span className="text-sm font-semibold text-warning">Pressure Mode</span>
-            </div>
-            <span className={`text-2xl font-mono font-bold ${pressureTimer <= 30 ? 'text-destructive' : 'text-foreground'}`}>
-              {formatTime(pressureTimer)}
-            </span>
-          </motion.div>
-        )}
-
-        {/* STAR Format Coach */}
-        {input.length > 20 && (interviewConfig?.type === 'Behavioral' || interviewConfig?.type === 'Mixed' || interviewConfig?.type === 'HR Round') && (
-          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">STAR Format</p>
-            <div className="space-y-1.5">
-              {(['situation', 'task', 'action', 'result'] as const).map((s) => (
-                <div key={s} className="flex items-center gap-2 text-sm">
-                  {star[s] ? <CheckCircle className="w-3.5 h-3.5 text-success" /> : <XCircle className="w-3.5 h-3.5 text-muted-foreground/40" />}
-                  <span className={star[s] ? 'text-success font-medium' : 'text-muted-foreground'}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
-                </div>
-              ))}
-            </div>
-            {!star.complete && <p className="text-xs text-warning mt-2">⚠ STAR structure incomplete</p>}
-            {star.complete && <p className="text-xs text-success mt-2">✓ Great STAR structure!</p>}
-          </motion.div>
-        )}
-
-        {/* Speech Hint */}
-        <AnimatePresence>
-          {speechHint && (
-            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="glass-card p-3 text-center text-sm text-primary font-medium">
-              🎤 {speechHint}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <button onClick={handleEnd} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition text-sm font-medium">
-          <StopCircle className="w-4 h-4" /> End Interview
+        <button onClick={handleEnd}
+          className="w-full bg-destructive/10 text-destructive py-2 rounded-lg">
+          <StopCircle className="inline mr-2"/> End Interview
         </button>
+
       </div>
 
-      {/* Chat */}
+      {/* CHAT */}
       <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          {messages.map((m) => (
-            <motion.div
-              key={m.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${m.role === 'user'
-                  ? 'bg-primary text-primary-foreground rounded-br-md'
-                  : 'glass-card text-card-foreground rounded-bl-md'
-                }`}>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map(m=>(
+            <div key={m.id}
+              className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}>
+              <div className={`px-4 py-3 rounded-xl max-w-[80%]
+                ${m.role==='user'?'bg-primary text-white':'glass-card'}`}>
                 {m.content}
               </div>
-            </motion.div>
-          ))}
-          {typing && (
-            <div className="flex justify-start">
-              <div className="glass-card px-4 py-3 rounded-2xl rounded-bl-md">
-                <div className="typing-indicator flex gap-1"><span /><span /><span /></div>
-              </div>
             </div>
-          )}
-          <div ref={chatEndRef} />
+          ))}
+          {typing && <div className="text-sm">AI typing...</div>}
+          <div ref={chatEndRef}/>
         </div>
 
-        {/* Input */}
-        <div className="p-4 border-t border-border flex gap-3 items-end">
-          <button
-            onClick={toggleMic}
-            className={`p-3 rounded-xl transition ${isListening ? 'bg-destructive text-destructive-foreground pulse-glow' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-          >
-            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+        <div className="p-4 border-t flex gap-2">
+          <button onClick={toggleMic} className="p-3 bg-secondary rounded">
+            <Mic/>
           </button>
+
           <textarea
-            className="flex-1 bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary resize-none max-h-32"
-            placeholder="Type your answer..."
-            rows={1}
+            className="flex-1 bg-secondary rounded px-3 py-2"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+            onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>{
+              if(e.key==='Enter' && !e.shiftKey){
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
           />
-          <button onClick={sendMessage} className="glow-button p-3 rounded-xl">
-            <Send className="w-5 h-5" />
+
+          <button onClick={sendMessage} className="p-3 bg-primary rounded text-white">
+            <Send/>
           </button>
         </div>
+
       </div>
-      <ConfidenceCamera />
+
+      <ConfidenceCamera/>
 
     </div>
   );
