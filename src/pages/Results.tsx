@@ -10,24 +10,44 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts';
 
+const savedConfidence =
+  Number(localStorage.getItem("last_confidence") || 70);
+
+const savedXP =
+  Number(localStorage.getItem("xp") || 0);
+
+const savedInterviews =
+  Number(localStorage.getItem("interviews_done") || 0);
+
 const mockResults = {
-  score: 78,
-  clarity: 82,
-  confidence: 71,
-  technical_depth: 75,
-  communication: 88,
-  body_language_score: 65,
-  feedback: "Strong communication skills with clear structure. Work on providing more specific technical examples and improving eye contact with the camera.",
-  ideal_answer: "When answering system design questions, start with requirements clarification, then move to high-level architecture, and finally dive into specific components.",
-  weaknesses: ['Time management', 'Technical depth on databases', 'Filler words usage'],
-  suggested_topics: ['B-Trees & Indexing', 'Distributed Systems', 'STAR Method Practice'],
-  followup_type: 'probe' as const,
+  score: Math.min(100, 60 + Math.floor(savedConfidence / 2)),
+  clarity: 75 + Math.floor(Math.random() * 10),
+  confidence: savedConfidence,
+  technical_depth: 70 + Math.floor(Math.random() * 10),
+  communication: 75 + Math.floor(Math.random() * 10),
+  body_language_score: 65 + Math.floor(Math.random() * 10),
+
+  feedback:
+    savedConfidence > 75
+      ? "Excellent confidence and communication. Ready for interviews."
+      : "Good attempt. Improve confidence and provide more structured answers.",
+
+  ideal_answer:
+    "Use STAR method: Situation → Task → Action → Result with measurable impact.",
+
+  weaknesses: ["Time management", "Depth in examples"],
+  suggested_topics: ["STAR method", "System Design basics"],
+
   study_plan: [
-    { day: 1, topic: 'Database Indexing', resource: 'LeetCode SQL problems', action: 'Solve 5 B-Tree questions' },
-    { day: 2, topic: 'System Design Basics', resource: 'System Design Primer (GitHub)', action: 'Design a URL shortener end-to-end' },
-    { day: 3, topic: 'Behavioral STAR', resource: 'MockForge AI Behavioral Mode', action: 'Practice 3 STAR responses with timer' },
+    { day: 1, topic: "Behavioral STAR", resource: "Mock practice", action: "Practice 5 answers" },
+    { day: 2, topic: "System Design", resource: "YouTube + notes", action: "Study basics" },
+    { day: 3, topic: "Mock Interview", resource: "MockForge AI", action: "Take one session" }
   ],
+
+  total_interviews: savedInterviews,
+  total_xp: savedXP
 };
+
 
 const Results = () => {
   const navigate = useNavigate();

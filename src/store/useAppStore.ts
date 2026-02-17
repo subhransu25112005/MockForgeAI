@@ -55,17 +55,24 @@ export interface UserStats {
 }
 
 const defaultStats: UserStats = {
-  interviewsCompleted: 12,
-  readinessScore: 73,
-  xpPoints: 2450,
+  interviewsCompleted:
+    Number(localStorage.getItem("interviews_done")) || 12,
+
+  readinessScore:
+    Number(localStorage.getItem("last_confidence")) || 73,
+
+  xpPoints:
+    Number(localStorage.getItem("xp")) || 2450,
+
   streak: 5,
   level: 7,
-  badges: ['First Interview', '5 Day Streak', 'Quick Learner', 'Code Warrior'],
-  weeklyScores: [55, 62, 58, 71, 68, 75, 73],
-  strengths: ['Data Structures', 'System Design', 'Communication'],
-  weaknesses: ['Dynamic Programming', 'Time Management', 'Concurrency'],
-  confidenceTrend: [40, 48, 52, 55, 63, 67, 72],
+  badges: ['First Interview','5 Day Streak','Quick Learner','Code Warrior'],
+  weeklyScores: [55,62,58,71,68,75,73],
+  strengths: ['Data Structures','System Design','Communication'],
+  weaknesses: ['Dynamic Programming','Time Management','Concurrency'],
+  confidenceTrend: [40,48,52,55,63,67,72],
 };
+
 
 interface AuthUser {
   name: string;

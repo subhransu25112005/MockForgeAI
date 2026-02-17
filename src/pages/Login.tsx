@@ -7,19 +7,53 @@ import { LogIn, Zap } from 'lucide-react';
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAppStore();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ✅ DEMO LOGIN (SAFE FOR HACKATHON)
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email.trim() || !password.trim()) {
       setError('Please fill all fields');
       return;
     }
-    const name = email.split('@')[0].replace(/[^a-zA-Z]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    login(name, email);
-    navigate('/dashboard');
+
+    try {
+      setLoading(true);
+      setError('');
+
+      // create name from email
+      const name = email
+        .split('@')[0]
+        .replace(/[^a-zA-Z]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+
+      // store login in Zustand/local store
+      login(name, email);
+
+      // go dashboard
+      navigate('/dashboard');
+
+    } catch (err) {
+      console.log(err);
+      setError("Login failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ DEMO FORGOT PASSWORD (NO FIREBASE)
+  const handleReset = () => {
+    if (!email.trim()) {
+      setError("Enter email first");
+      return;
+    }
+
+    alert("Password reset link sent to email (Demo Mode)");
   };
 
   return (
@@ -29,19 +63,26 @@ const Login = () => {
         animate={{ opacity: 1, scale: 1 }}
         className="glass-card p-8 w-full max-w-md"
       >
-        <div className="flex items-center gap-2 justify-center mb-6">
-          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-primary" />
-          </div>
-          <span className="text-xl font-bold gradient-text">MockForge AI</span>
-        </div>
+        {/* LOGO */}
+        <img src="/logo.png" className="h-10 mx-auto" />
+          
+
         <h2 className="text-2xl font-bold text-center mb-2">Welcome Back</h2>
-        <p className="text-center text-muted-foreground text-sm mb-6">Sign in to continue practicing</p>
+        <p className="text-center text-muted-foreground text-sm mb-6">
+          Sign in to continue practicing
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-destructive text-sm text-center">{error}</p>}
+
+          {error && (
+            <p className="text-destructive text-sm text-center">{error}</p>
+          )}
+
+          {/* EMAIL */}
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1 block">Email</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">
+              Email
+            </label>
             <input
               type="email"
               className="w-full bg-secondary rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
@@ -50,8 +91,12 @@ const Login = () => {
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
+
+          {/* PASSWORD */}
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1 block">Password</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">
+              Password
+            </label>
             <input
               type="password"
               className="w-full bg-secondary rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
@@ -60,20 +105,38 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+
+          {/* LOGIN BUTTON */}
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
+            disabled={loading}
             className="w-full glow-button flex items-center justify-center gap-2"
           >
-            <LogIn className="w-4 h-4" /> Sign In
+            <LogIn className="w-4 h-4" />
+            {loading ? "Signing in..." : "Sign In"}
           </motion.button>
+
         </form>
 
+        {/* FORGOT PASSWORD */}
+        <button
+          type="button"
+          onClick={handleReset}
+          className="text-primary text-sm mt-3 w-full hover:underline"
+        >
+          Forgot Password?
+        </button>
+
+        {/* SIGNUP LINK */}
         <p className="text-center text-sm text-muted-foreground mt-6">
           Don't have an account?{' '}
-          <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
+          <Link to="/signup" className="text-primary hover:underline">
+            Sign up
+          </Link>
         </p>
+
       </motion.div>
     </div>
   );

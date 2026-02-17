@@ -195,9 +195,24 @@ const stopRecording = () => {
   }, [input, isListening, confidence, questionIdx, interviewHistory]);
 
   const handleEnd = () => {
-    endInterview();
-    navigate('/results');
-  };
+
+  // keep existing logic
+  endInterview();
+
+  // SAVE REAL DATA (for dashboard realism)
+
+  const prev = Number(localStorage.getItem("interviews_done") || 0);
+  localStorage.setItem("interviews_done", String(prev + 1));
+
+  const xp = Number(localStorage.getItem("xp") || 0);
+  localStorage.setItem("xp", String(xp + 50));
+
+  localStorage.setItem("last_confidence", String(confidence));
+
+  // go to results page
+  navigate('/results');
+};
+
 
   const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
