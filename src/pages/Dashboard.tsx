@@ -1,13 +1,18 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   BarChart3, Flame, Award, TrendingUp, Zap, ArrowRight,
-  Brain, BookOpen, Code
+  Brain, BookOpen, Code, Trash2,
+  ExternalLink, MapPin, Briefcase, BookMarked, Terminal
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
+import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { doc, deleteDoc } from "firebase/firestore";
+import { auth, db } from "@/firebase";
 
 import StatsCard from '@/components/StatsCard';
 import ReadinessScore from '@/components/ReadinessScore';
@@ -15,13 +20,118 @@ import { useAppStore } from '@/store/useAppStore';
 
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const GATEWAY_LINKS = [
+  {
+    label: 'Practice Coding',
+    description: 'Solve DSA problems & challenges',
+    url: 'https://leetcode.com',
+    icon: Terminal,
+    color: 'text-cyan-400',
+    bg: 'bg-cyan-400/10',
+    border: 'border-cyan-400/20',
+  },
+  {
+    label: 'Learn Interview Concepts',
+    description: 'CS fundamentals & interview guides',
+    url: 'https://www.geeksforgeeks.org',
+    icon: BookMarked,
+    color: 'text-green-400',
+    bg: 'bg-green-400/10',
+    border: 'border-green-400/20',
+  },
+  {
+    label: 'Mock Interview Practice',
+    description: 'Real-time mock interviews & prep',
+    url: 'https://www.interviewbit.com',
+    icon: Brain,
+    color: 'text-purple-400',
+    bg: 'bg-purple-400/10',
+    border: 'border-purple-400/20',
+  },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { stats, user } = useAppStore();
+  const [city, setCity] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          );
+          const data = await res.json();
+          const detectedCity =
+            data?.address?.city ||
+            data?.address?.town ||
+            data?.address?.village ||
+            null;
+          setCity(detectedCity);
+        } catch {
+          // silently ignore
+        }
+      },
+      () => { /* permission denied — use default */ }
+    );
+  }, []);
+
+  async function handleDeleteAccount() {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser || !currentUser.email) {
+      alert("No logged-in user found");
+      return;
+    }
+
+    const ok = window.confirm(
+      "Are you sure you want to permanently delete your account?"
+    );
+    if (!ok) return;
+
+    try {
+      // 🔐 ALWAYS re-authenticate first (required by Firebase)
+      const password = window.prompt("Enter your password to confirm deletion:");
+      if (!password) return;
+
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        password
+      );
+
+      await reauthenticateWithCredential(currentUser, credential);
+      console.log("Re-auth success. UID:", currentUser.uid);
+
+      // 🧹 Delete Firestore profile first
+      await deleteDoc(doc(db, "users", currentUser.uid)).catch(() => { });
+      console.log("Firestore deleted");
+
+      // ❌ Delete Firebase Auth account
+      await deleteUser(currentUser);
+      console.log("Auth deleted");
+
+      alert("Account deleted successfully");
+      navigate("/login");
+
+    } catch (err: any) {
+      console.error("Delete error:", err);
+
+      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        alert("Incorrect password. Please try again.");
+      } else if (err.code === "auth/too-many-requests") {
+        alert("Too many attempts. Try again later.");
+      } else {
+        alert(err.message || "Delete failed. Please try again.");
+      }
+    }
+  }
 
   // SAFE FALLBACKS (prevents crash if store empty)
-  const weeklyScores = stats?.weeklyScores?.length ? stats.weeklyScores : [60,65,70,75,80,85,90];
-  const confidenceTrend = stats?.confidenceTrend?.length ? stats.confidenceTrend : [55,60,65,70,72,75,80];
+  const weeklyScores = stats?.weeklyScores?.length ? stats.weeklyScores : [60, 65, 70, 75, 80, 85, 90];
+  const confidenceTrend = stats?.confidenceTrend?.length ? stats.confidenceTrend : [55, 60, 65, 70, 72, 75, 80];
 
   // WEEKLY LINE CHART DATA (REAL)
   const weeklyData = weekDays.map((day, i) => ({
@@ -228,6 +338,83 @@ const Dashboard = () => {
 
         </motion.div>
       </div>
+
+      {/* CAREER GATEWAY */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="glass-card p-6"
+      >
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <Briefcase className="w-5 h-5 text-primary" /> Continue Your Journey
+        </h3>
+        <p className="text-sm text-muted-foreground mb-5">
+          Resources &amp; opportunities to accelerate your interview success.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {GATEWAY_LINKS.map(({ label, description, url, icon: Icon, color, bg, border }) => (
+            <motion.a
+              key={label}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className={`flex flex-col gap-3 p-4 rounded-xl border ${border} ${bg} hover:brightness-110 transition-all cursor-pointer`}
+            >
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${bg} border ${border}`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+              </div>
+              <div className="flex-1">
+                <p className={`font-semibold text-sm ${color}`}>{label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+              </div>
+              <ExternalLink className={`w-3.5 h-3.5 ${color} opacity-60 self-end`} />
+            </motion.a>
+          ))}
+
+          {/* FIND NEARBY JOBS */}
+          <motion.a
+            href={`https://www.google.com/search?q=software+jobs+near+${city ? encodeURIComponent(city) : 'me'}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="flex flex-col gap-3 p-4 rounded-xl border border-orange-400/20 bg-orange-400/10 hover:brightness-110 transition-all cursor-pointer"
+          >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-orange-400/10 border border-orange-400/20">
+              <MapPin className="w-5 h-5 text-orange-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm text-orange-400">Find Nearby Jobs</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {city ? `Jobs near ${city}` : 'Software jobs near you'}
+              </p>
+            </div>
+            <ExternalLink className="w-3.5 h-3.5 text-orange-400 opacity-60 self-end" />
+          </motion.a>
+        </div>
+      </motion.div>
+
+      {/* DELETE ACCOUNT */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+        className="flex justify-center"
+      >
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleDeleteAccount}
+          className="px-6 py-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 transition-colors flex items-center gap-2"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete Account
+        </motion.button>
+      </motion.div>
 
     </div>
   );

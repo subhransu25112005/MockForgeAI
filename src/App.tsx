@@ -19,11 +19,28 @@ import ResumeMode from "@/pages/ResumeMode";
 import NotFound from "./pages/NotFound";
 import { useAppStore } from "@/store/useAppStore";
 
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/firebase';
+
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { loadSession } = useAppStore();
-  useEffect(() => { loadSession(); }, [loadSession]);
+  const { setUser } = useAppStore();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          email: firebaseUser.email || '',
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [setUser]);
 
   return (
     <div className="min-h-screen bg-background">

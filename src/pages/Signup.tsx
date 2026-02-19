@@ -1,29 +1,75 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAppStore } from '@/store/useAppStore';
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/firebase";
 import { UserPlus, Zap } from 'lucide-react';
+
+const FIREBASE_ERROR_MESSAGES: Record<string, string> = {
+  "auth/email-already-in-use": "This email is already in use. Try signing in instead.",
+  "auth/invalid-email": "The email address is invalid.",
+  "auth/weak-password": "Password is too weak (minimum 6 characters).",
+  "auth/operation-not-allowed": "Email/password accounts are not enabled.",
+};
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { signup } = useAppStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (loading) return;
+
+    setError('');
+
     if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Please fill all fields');
+      setError("Please fill all fields");
       return;
     }
+
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
-    signup(name, email);
-    navigate('/dashboard');
+
+    setLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      const user = userCredential.user;
+
+      await setDoc(doc(db, "users", user.uid), {
+        name,
+        email: user.email,
+        createdAt: serverTimestamp(),
+      });
+
+      // The store update will be handled by the onAuthStateChanged listener in App.tsx
+
+      navigate("/dashboard");
+    } catch (err: any) {
+      const fbCode = err.code as string | undefined;
+      if (fbCode && fbCode in FIREBASE_ERROR_MESSAGES) {
+        setError(FIREBASE_ERROR_MESSAGES[fbCode]);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError("An error occurred. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,6 +98,7 @@ const Signup = () => {
               placeholder="Alex Chen"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div>
@@ -62,6 +109,7 @@ const Signup = () => {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div>
@@ -72,15 +120,17 @@ const Signup = () => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
             />
           </div>
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: loading ? 1 : 1.02 }}
+            whileTap={{ scale: loading ? 1 : 0.98 }}
             type="submit"
             className="w-full glow-button flex items-center justify-center gap-2"
+            disabled={loading}
           >
-            <UserPlus className="w-4 h-4" /> Create Account
+            <UserPlus className="w-4 h-4" /> {loading ? "Creating..." : "Create Account"}
           </motion.button>
         </form>
 

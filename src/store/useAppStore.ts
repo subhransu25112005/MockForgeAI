@@ -66,8 +66,8 @@ const loadStats = (): UserStats => ({
   level: Number(localStorage.getItem("level")) || 1,
   badges: JSON.parse(localStorage.getItem("badges") || '["First Interview"]'),
   weeklyScores: JSON.parse(localStorage.getItem("weeklyScores") || "[60,65,70]"),
-  strengths: ['Data Structures','System Design','Communication'],
-  weaknesses: ['Dynamic Programming','Time Management','Concurrency'],
+  strengths: ['Data Structures', 'System Design', 'Communication'],
+  weaknesses: ['Dynamic Programming', 'Time Management', 'Concurrency'],
   confidenceTrend: JSON.parse(localStorage.getItem("confidenceTrend") || "[50,55,60]"),
 });
 
@@ -96,10 +96,8 @@ interface AppState {
   /* Auth */
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (name: string, email: string) => void;
-  signup: (name: string, email: string) => void;
+  setUser: (user: AuthUser | null) => void;
   logout: () => void;
-  loadSession: () => void;
 
   /* Stats */
   stats: UserStats;
@@ -142,30 +140,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   /* ===== AUTH ===== */
 
-  login: (name, email) => {
-    const user = { name, email };
-    localStorage.setItem('mockforge_user', JSON.stringify(user));
-    set({ user, isAuthenticated: true });
-  },
-
-  signup: (name, email) => {
-    const user = { name, email };
-    localStorage.setItem('mockforge_user', JSON.stringify(user));
-    set({ user, isAuthenticated: true });
+  setUser: (user) => {
+    set({ user, isAuthenticated: !!user });
   },
 
   logout: () => {
-    localStorage.removeItem('mockforge_user');
     set({ user: null, isAuthenticated: false });
-  },
-
-  loadSession: () => {
-    const stored = localStorage.getItem('mockforge_user');
-    if (stored) {
-      try {
-        set({ user: JSON.parse(stored), isAuthenticated: true });
-      } catch {}
-    }
   },
 
   /* ===== STATS UPDATE AFTER INTERVIEW ===== */

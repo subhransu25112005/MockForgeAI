@@ -20,6 +20,23 @@ const simulatedQuestions = [
   "How do you handle tight deadlines?",
 ];
 
+const getFallbackQuestion = (index: number) => {
+  if (!simulatedQuestions.length) {
+    return "Let's continue with another question about your experience.";
+  }
+  return simulatedQuestions[index % simulatedQuestions.length];
+};
+
+const generateAIQuestionFromAI = async (
+  index: number,
+  interviewConfig: any,
+  history: string[]
+): Promise<string> => {
+  // Placeholder for real AI backend integration.
+  // Always fall back to local questions for now.
+  throw new Error('AI question generator not implemented');
+};
+
 const PRESSURE_TIME = 120;
 
 /* ---------------- STAR CHECK ---------------- */
@@ -52,7 +69,7 @@ const InterviewSession = () => {
 
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
-  const [questionIdx, setQuestionIdx] = useState(0);
+  const [flowIndex, setFlowIndex] = useState(0);
   const [confidence, setConfidence] = useState(65);
   const [elapsed, setElapsed] = useState(0);
   const [pressureTimer, setPressureTimer] = useState(PRESSURE_TIME);
@@ -72,30 +89,14 @@ const InterviewSession = () => {
     return () => clearInterval(t);
   }, []);
 
-  /* ---------------- PRESSURE MODE ---------------- */
-
-  useEffect(() => {
-    if (!isPressure) return;
-    const t = setInterval(() => {
-      setPressureTimer(prev => {
-        if (prev <= 1) {
-          if (input.trim()) sendMessage();
-          return PRESSURE_TIME;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [isPressure, input]);
-
   /* ---------------- INITIAL QUESTION ---------------- */
 
   useEffect(() => {
     if (messages.length === 0) {
       const greeting =
         interviewConfig
-          ? `Hello! I'm your ${interviewConfig.personality} interviewer for ${interviewConfig.role} at ${interviewConfig.company}.\n\n${simulatedQuestions[0]}`
-          : `Hello! Let's begin.\n\n${simulatedQuestions[0]}`;
+          ? `Hello! I'm your ${interviewConfig.personality} interviewer for ${interviewConfig.role} at ${interviewConfig.company}.\n\n${getFallbackQuestion(0)}`
+          : `Hello! Let's begin.\n\n${getFallbackQuestion(0)}`;
 
       addMessage({
         id: Date.now().toString(),
@@ -156,9 +157,29 @@ const InterviewSession = () => {
 
   /* ---------------- SEND MESSAGE ---------------- */
 
+  const nextQuestion = useCallback(async () => {
+    const nextIndex = flowIndex + 1;
+    setFlowIndex(nextIndex);
+    setPressureTimer(PRESSURE_TIME);
+
+    try {
+      const aiQuestion = await generateAIQuestionFromAI(
+        nextIndex,
+        interviewConfig,
+        interviewHistory
+      );
+      const trimmed = aiQuestion?.toString().trim();
+      if (trimmed) return trimmed;
+    } catch {
+      // ignore and fall back
+    }
+
+    return getFallbackQuestion(nextIndex);
+  }, [flowIndex, interviewConfig, interviewHistory]);
+
   const sendMessage = useCallback(() => {
 
-    if (!input.trim()) return;
+    if (!input.trim() || typing) return;
 
     const userText = input.trim();
 
@@ -170,7 +191,6 @@ const InterviewSession = () => {
     });
 
     setInput('');
-    setPressureTimer(PRESSURE_TIME);
 
     const keyPoint =
       userText.length > 50
@@ -186,18 +206,16 @@ const InterviewSession = () => {
 
     setConfidence(newConfidence);
 
-    setTimeout(() => {
+    setTimeout(async () => {
 
-      const nextIdx =
-        Math.min(questionIdx + 1, simulatedQuestions.length - 1);
-
-      setQuestionIdx(nextIdx);
+      const score = 70 + Math.floor(Math.random() * 20);
+      const questionText = await nextQuestion();
 
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content:
-          `Good answer!\nScore: ${70 + Math.floor(Math.random()*20)}/100\n\n${simulatedQuestions[nextIdx]}`,
+          `Good answer!\nScore: ${score}/100\n\n${questionText}`,
         timestamp: Date.now()
       });
 
@@ -206,7 +224,26 @@ const InterviewSession = () => {
 
     }, 1200);
 
-  }, [input, confidence, questionIdx, interviewHistory]);
+  }, [input, typing, confidence, interviewHistory, addMessage, addToHistory, addXP, nextQuestion]);
+
+  /* ---------------- PRESSURE MODE ---------------- */
+
+  useEffect(() => {
+    if (!isPressure) return;
+    if (pressureTimer <= 0) {
+      if (input.trim()) {
+        sendMessage();
+      } else {
+        setPressureTimer(PRESSURE_TIME);
+      }
+      return;
+    }
+    const t = setTimeout(
+      () => setPressureTimer(prev => Math.max(prev - 1, 0)),
+      1000
+    );
+    return () => clearTimeout(t);
+  }, [isPressure, pressureTimer, input, sendMessage]);
 
   /* ---------------- END INTERVIEW (FIXED) ---------------- */
 
@@ -264,7 +301,7 @@ const InterviewSession = () => {
           </div>
 
           <div className="flex items-center">
-            <Brain className="w-4 h-4 mr-2"/> Question #{questionIdx+1}
+            <Brain className="w-4 h-4 mr-2"/> Question #{flowIndex+1}
           </div>
         </div>
 
